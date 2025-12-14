@@ -9,6 +9,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { UserMenu } from "@/components/UserMenu";
+import { useNotifications } from "@/hooks/useNotifications";
+import { motion, AnimatePresence } from "framer-motion";
 
 const navItems = [
   { to: "/", label: "Awakening", icon: Zap },
@@ -16,8 +18,8 @@ const navItems = [
   { to: "/habits", label: "Habits", icon: Trophy },
   { to: "/gates", label: "Gates", icon: Swords },
   { to: "/leaderboard", label: "Leaderboard", icon: Medal },
-  { to: "/guilds", label: "Guilds", icon: Castle },
-  { to: "/friends", label: "Friends", icon: Users },
+  { to: "/guilds", label: "Guilds", icon: Castle, notifKey: "guilds" as const },
+  { to: "/friends", label: "Friends", icon: Users, notifKey: "friends" as const },
   { to: "/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/achievements", label: "Achievements", icon: Award },
   { to: "/rewards", label: "Rewards", icon: Gift },
@@ -34,6 +36,7 @@ interface AppSidebarProps {
 export function AppSidebar({ onOpenChangelog }: AppSidebarProps) {
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  const { counts } = useNotifications();
 
   const handleNavClick = () => {
     setOpen(false);
@@ -43,6 +46,13 @@ export function AppSidebar({ onOpenChangelog }: AppSidebarProps) {
     setOpen(false);
     onOpenChangelog?.();
   };
+
+  const getNotifCount = (notifKey?: "guilds" | "friends") => {
+    if (!notifKey) return 0;
+    return counts[notifKey] || 0;
+  };
+
+  const hasAnyNotifications = counts.total > 0;
 
   return (
     <>
@@ -65,6 +75,20 @@ export function AppSidebar({ onOpenChangelog }: AppSidebarProps) {
                       <span className="block w-3 h-0.5 bg-primary rounded-full shadow-[0_0_6px_hsl(var(--neon-cyan))] group-hover:shadow-[0_0_10px_hsl(var(--neon-cyan))] transition-all duration-300 group-hover:w-5" />
                     </div>
                     <span className="sr-only">Open menu</span>
+                    
+                    {/* Discord-style notification pill on menu button */}
+                    <AnimatePresence>
+                      {hasAnyNotifications && (
+                        <motion.div
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0, opacity: 0 }}
+                          className="absolute -top-1 -right-1 h-5 min-w-5 px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold shadow-[0_0_10px_rgba(239,68,68,0.6)]"
+                        >
+                          {counts.total > 9 ? '9+' : counts.total}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="w-72 bg-card/95 backdrop-blur-xl border-primary/20 p-0">
@@ -79,18 +103,52 @@ export function AppSidebar({ onOpenChangelog }: AppSidebarProps) {
 
                     {/* Navigation Links */}
                     <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-                      {navItems.map(({ to, label, icon: Icon }) => (
-                        <NavLink
-                          key={to}
-                          to={to}
-                          onClick={handleNavClick}
-                          className="flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground transition-all duration-300 hover:text-primary hover:bg-primary/10"
-                          activeClassName="text-primary bg-primary/20 shadow-[0_0_20px_hsl(var(--neon-cyan)/0.3)]"
-                        >
-                          <Icon className="w-5 h-5" />
-                          <span>{label}</span>
-                        </NavLink>
-                      ))}
+                      {navItems.map(({ to, label, icon: Icon, notifKey }) => {
+                        const notifCount = getNotifCount(notifKey);
+                        return (
+                          <NavLink
+                            key={to}
+                            to={to}
+                            onClick={handleNavClick}
+                            className="flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground transition-all duration-300 hover:text-primary hover:bg-primary/10 relative"
+                            activeClassName="text-primary bg-primary/20 shadow-[0_0_20px_hsl(var(--neon-cyan)/0.3)]"
+                          >
+                            <div className="relative">
+                              <Icon className="w-5 h-5" />
+                              {/* Discord-style notification dot on icon */}
+                              <AnimatePresence>
+                                {notifCount > 0 && (
+                                  <motion.div
+                                    initial={{ scale: 0, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    exit={{ scale: 0, opacity: 0 }}
+                                    className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-0.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold shadow-[0_0_8px_rgba(239,68,68,0.6)]"
+                                  >
+                                    {notifCount > 9 ? '9+' : notifCount}
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                            <span>{label}</span>
+                            
+                            {/* Right-side notification badge for emphasis */}
+                            <AnimatePresence>
+                              {notifCount > 0 && (
+                                <motion.div
+                                  initial={{ scale: 0, x: -10 }}
+                                  animate={{ scale: 1, x: 0 }}
+                                  exit={{ scale: 0, x: -10 }}
+                                  className="ml-auto"
+                                >
+                                  <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 text-xs font-medium border border-red-500/30">
+                                    {notifCount} new
+                                  </span>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </NavLink>
+                        );
+                      })}
                     </nav>
 
                     {/* Footer with What's New */}

@@ -11,14 +11,22 @@ export interface Notification {
   created_at: string;
 }
 
+export interface NotificationCounts {
+  guilds: number;
+  friends: number;
+  total: number;
+}
+
 export const useNotifications = () => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [counts, setCounts] = useState<NotificationCounts>({ guilds: 0, friends: 0, total: 0 });
   const [loading, setLoading] = useState(true);
 
   const fetchNotifications = useCallback(async () => {
     if (!user) {
       setNotifications([]);
+      setCounts({ guilds: 0, friends: 0, total: 0 });
       setLoading(false);
       return;
     }
@@ -116,6 +124,16 @@ export const useNotifications = () => {
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
 
+      // Calculate counts by page
+      const guildCount = allNotifications.filter(n => n.type === 'guild_invite').length;
+      const friendCount = allNotifications.filter(n => n.type === 'friend_request' || n.type === 'duel_challenge').length;
+
+      setCounts({
+        guilds: guildCount,
+        friends: friendCount,
+        total: allNotifications.length,
+      });
+
       setNotifications(allNotifications);
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -127,14 +145,71 @@ export const useNotifications = () => {
   useEffect(() => {
     fetchNotifications();
     
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
-  }, [fetchNotifications]);
+    // Set up realtime subscriptions
+    if (!user) return;
+
+    // Subscribe to guild_invites changes
+    const guildInvitesChannel = supabase
+      .channel('guild-invites-notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'guild_invites',
+          filter: `invitee_id=eq.${user.id}`,
+        },
+        () => {
+          fetchNotifications();
+        }
+      )
+      .subscribe();
+
+    // Subscribe to friendships changes
+    const friendshipsChannel = supabase
+      .channel('friendships-notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'friendships',
+          filter: `addressee_id=eq.${user.id}`,
+        },
+        () => {
+          fetchNotifications();
+        }
+      )
+      .subscribe();
+
+    // Subscribe to streak_duels changes
+    const duelsChannel = supabase
+      .channel('duels-notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'streak_duels',
+          filter: `challenged_id=eq.${user.id}`,
+        },
+        () => {
+          fetchNotifications();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(guildInvitesChannel);
+      supabase.removeChannel(friendshipsChannel);
+      supabase.removeChannel(duelsChannel);
+    };
+  }, [fetchNotifications, user]);
 
   return {
     notifications,
-    notificationCount: notifications.length,
+    notificationCount: counts.total,
+    counts,
     loading,
     refresh: fetchNotifications,
   };

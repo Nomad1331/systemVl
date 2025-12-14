@@ -2,6 +2,23 @@
 
 All notable changes to the Solo Leveling System will be documented in this file.
 
+## [3.8.0] - 2025-12-14
+
+### Added
+- **Real-time Notifications**: Instant notification updates using Supabase Realtime subscriptions
+  - No more polling - notifications appear instantly when received
+  - Subscribes to guild_invites, friendships, and streak_duels tables
+  
+- **Discord-style Notification Bubbles**: Visual notification indicators on sidebar
+  - Red pill badge on menu button shows total notification count
+  - Individual nav items (Guilds, Friends) show their specific notification counts
+  - Animated entrance/exit with framer-motion for smooth UX
+  - "X new" badge on right side of nav items for emphasis
+
+### Technical
+- Updated `src/hooks/useNotifications.ts` - Added Supabase Realtime subscriptions, page-specific counts
+- Updated `src/components/AppSidebar.tsx` - Discord-style notification bubbles with animations
+
 ## [3.7.0] - 2025-12-14
 
 ### Added
