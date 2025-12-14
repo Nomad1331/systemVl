@@ -1,0 +1,56 @@
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { cn } from '@/lib/utils';
+
+// Class emoji mapping - same as PlayerProfileCard
+const CLASS_EMOJIS: Record<string, string> = {
+  fighter: "⚔️",
+  warrior: "⚔️",
+  tanker: "🛡️",
+  mage: "🔮",
+  assassin: "🗡️",
+  ranger: "🏹",
+  healer: "💚",
+  hunter: "🏹",
+  necromancer: "💀",
+  default: "⚔️",
+};
+
+interface HunterAvatarProps {
+  avatar?: string | null;
+  hunterName: string;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  className?: string;
+  showBorder?: boolean;
+}
+
+const sizeClasses = {
+  sm: 'h-8 w-8 text-xs',
+  md: 'h-10 w-10 text-sm',
+  lg: 'h-12 w-12 text-lg',
+  xl: 'h-20 w-20 text-3xl',
+};
+
+export const HunterAvatar = ({ 
+  avatar, 
+  hunterName, 
+  size = 'md', 
+  className,
+  showBorder = true 
+}: HunterAvatarProps) => {
+  const isCustomImage = avatar?.startsWith('data:');
+  
+  return (
+    <Avatar className={cn(
+      sizeClasses[size],
+      showBorder && 'border-2 border-primary/30',
+      className
+    )}>
+      {isCustomImage ? (
+        <AvatarImage src={avatar} alt={hunterName} className="object-cover" />
+      ) : null}
+      <AvatarFallback className="bg-primary/20 text-primary font-bold">
+        {isCustomImage ? hunterName.charAt(0).toUpperCase() : (CLASS_EMOJIS[avatar || 'default'] || hunterName.charAt(0).toUpperCase())}
+      </AvatarFallback>
+    </Avatar>
+  );
+};
