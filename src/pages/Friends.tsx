@@ -709,15 +709,29 @@ const Friends = () => {
                       {customIsFixed ? "Pool stays fixed" : "Pool grows +3 XP daily"}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">Growing</span>
-                    <input
-                      type="checkbox"
-                      checked={customIsFixed}
-                      onChange={(e) => setCustomIsFixed(e.target.checked)}
-                      className="w-4 h-4 rounded border-purple-500 text-purple-500 focus:ring-purple-500"
-                    />
-                    <span className="text-xs text-muted-foreground">Fixed</span>
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setCustomIsFixed(false)}
+                      className={`px-3 py-1.5 text-xs rounded-l-md border transition-all ${
+                        !customIsFixed 
+                          ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 font-semibold' 
+                          : 'bg-background/50 border-border text-muted-foreground hover:bg-background/80'
+                      }`}
+                    >
+                      Growing
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCustomIsFixed(true)}
+                      className={`px-3 py-1.5 text-xs rounded-r-md border transition-all ${
+                        customIsFixed 
+                          ? 'bg-purple-500/20 border-purple-500 text-purple-400 font-semibold' 
+                          : 'bg-background/50 border-border text-muted-foreground hover:bg-background/80'
+                      }`}
+                    >
+                      Fixed
+                    </button>
                   </div>
                 </div>
                 
@@ -725,18 +739,32 @@ const Friends = () => {
                   <div>
                     <Label className="text-sm text-foreground">Loser Penalty</Label>
                     <p className="text-xs text-muted-foreground">
-                      {customIsCompetitive ? "Loser loses XP" : "No penalty for loser"}
+                      {customIsCompetitive ? "Loser loses XP to winner" : "No penalty for loser"}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">Normal</span>
-                    <input
-                      type="checkbox"
-                      checked={customIsCompetitive}
-                      onChange={(e) => setCustomIsCompetitive(e.target.checked)}
-                      className="w-4 h-4 rounded border-purple-500 text-purple-500 focus:ring-purple-500"
-                    />
-                    <span className="text-xs text-muted-foreground">Competitive</span>
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setCustomIsCompetitive(false)}
+                      className={`px-3 py-1.5 text-xs rounded-l-md border transition-all ${
+                        !customIsCompetitive 
+                          ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 font-semibold' 
+                          : 'bg-background/50 border-border text-muted-foreground hover:bg-background/80'
+                      }`}
+                    >
+                      Normal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCustomIsCompetitive(true)}
+                      className={`px-3 py-1.5 text-xs rounded-r-md border transition-all ${
+                        customIsCompetitive 
+                          ? 'bg-red-500/20 border-red-500 text-red-400 font-semibold' 
+                          : 'bg-background/50 border-border text-muted-foreground hover:bg-background/80'
+                      }`}
+                    >
+                      Competitive
+                    </button>
                   </div>
                 </div>
               </div>

@@ -2,6 +2,16 @@
 
 All notable changes to the Solo Leveling System will be documented in this file.
 
+## [3.9.1] - 2025-12-15
+
+### Fixed
+- **Guild Page Auto-Scroll**: Removed auto-scroll on guild messages that caused page to jump to bottom on load. Now only scrolls when user sends a new message.
+- **Competitive Duel XP Transfer**: Fixed bug where competitive mode duels weren't properly deducting XP from the loser. Now the loser loses XP equal to the prize pool (XP transfers from loser to winner).
+- **Re-inviting Users to Guild**: Fixed duplicate key constraint error when re-inviting users who previously left the guild.
+
+### Improved
+- **Custom Duel Toggle UI**: Replaced confusing checkbox toggles with clear segmented button controls for Pool Growth (Growing/Fixed) and Loser Penalty (Normal/Competitive). Selected option is now visually highlighted.
+
 ## [3.9.0] - 2025-12-15
 
 ### Added

@@ -102,10 +102,10 @@ const Guilds = () => {
   const [searching, setSearching] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom of messages
-  useEffect(() => {
+  // Scroll to bottom of messages only when user sends a new message
+  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [guildMessages]);
+  };
 
   // Update tab when guild changes
   useEffect(() => {
@@ -132,6 +132,8 @@ const Guilds = () => {
     const success = await sendMessage(messageInput);
     if (success) {
       setMessageInput('');
+      // Scroll to bottom after sending message
+      setTimeout(() => scrollToBottom(), 100);
     }
   };
 

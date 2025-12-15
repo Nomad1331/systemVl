@@ -453,7 +453,8 @@ export const useFriends = () => {
       // Check mode settings
       const modeIndicator = duel.challenger_streak; // 0=system, 1=competitive, 2=custom
       const isCustom = modeIndicator === 2;
-      const isCompetitive = modeIndicator === 1 || (isCustom && modeIndicator === 2);
+      // For competitive: modeIndicator=1 OR (custom mode with challenged_streak=1 meaning competitive penalty)
+      const isCompetitive = modeIndicator === 1 || (isCustom && duel.challenged_streak === 1);
       const isFixedPool = duel.challenged_streak === 1;
       
       // Calculate final reward pool
@@ -490,7 +491,7 @@ export const useFriends = () => {
       if (xpError) console.error('Failed to award XP:', xpError);
 
       // In competitive mode, deduct FULL XP from loser (same as winner gains)
-      if (isCompetitive || (isCustom && duel.challenged_streak === 1)) {
+      if (isCompetitive) {
         const { error: loserXpError } = await supabase.rpc('add_player_xp', {
           _user_id: loserId,
           _xp_amount: -finalRewardPool, // Loser loses the same amount winner gains
