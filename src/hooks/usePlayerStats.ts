@@ -19,6 +19,22 @@ const emitLevelUp = (level: number, pointsEarned: number) => {
   levelUpListeners.forEach(listener => listener(level, pointsEarned));
 };
 
+// Event emitter for stats changes (for cloud sync)
+type StatsChangeListener = (stats: PlayerStats) => void;
+const statsChangeListeners: StatsChangeListener[] = [];
+
+export const onStatsChange = (listener: StatsChangeListener) => {
+  statsChangeListeners.push(listener);
+  return () => {
+    const index = statsChangeListeners.indexOf(listener);
+    if (index > -1) statsChangeListeners.splice(index, 1);
+  };
+};
+
+const emitStatsChange = (stats: PlayerStats) => {
+  statsChangeListeners.forEach(listener => listener(stats));
+};
+
 export const usePlayerStats = () => {
   const [stats, setStats] = useState<PlayerStats>(() => storage.getStats());
   const [hasMounted, setHasMounted] = useState(false);
@@ -32,6 +48,8 @@ export const usePlayerStats = () => {
   useEffect(() => {
     if (hasMounted) {
       storage.setStats(stats);
+      // Emit stats change for cloud sync
+      emitStatsChange(stats);
     }
   }, [stats, hasMounted]);
 
@@ -153,16 +171,18 @@ export const usePlayerStats = () => {
     return false;
   };
 
-  const unlockCardFrame = (frameId: string, cost: number): boolean => {
+  // Updated unlockCardFrame to return the new stats for immediate cloud sync
+  const unlockCardFrame = (frameId: string, cost: number): { success: boolean; newStats: PlayerStats | null } => {
     if (stats.credits >= cost && !stats.unlockedCardFrames?.includes(frameId)) {
-      setStats((prev) => ({
-        ...prev,
-        credits: prev.credits - cost,
-        unlockedCardFrames: [...(prev.unlockedCardFrames || ["default"]), frameId],
-      }));
-      return true;
+      const newStats = {
+        ...stats,
+        credits: stats.credits - cost,
+        unlockedCardFrames: [...(stats.unlockedCardFrames || ["default"]), frameId],
+      };
+      setStats(newStats);
+      return { success: true, newStats };
     }
-    return false;
+    return { success: false, newStats: null };
   };
 
   const unlockClass = (classId: string) => {
@@ -225,7 +245,6 @@ export const usePlayerStats = () => {
       newLevel = Math.max(1, newLevel - 1);
       
       // Cap totalXP to prevent overflow after demotion
-      // User should have at most (XP for next level - 1)
       const maxAllowedXP = calculateTotalXPForLevel(newLevel + 1) - 1;
       newTotalXP = Math.min(newTotalXP, maxAllowedXP);
       
@@ -341,6 +360,9 @@ export const usePlayerStats = () => {
     });
   };
 
+  // Get current stats for external use (e.g., cloud sync)
+  const getCurrentStats = useCallback(() => stats, [stats]);
+
   return {
     stats,
     addXP,
@@ -360,5 +382,6 @@ export const usePlayerStats = () => {
     applyNecromancerHardPenalty,
     applyHardModeRewards,
     getActiveBoostMultiplier,
+    getCurrentStats,
   };
 };

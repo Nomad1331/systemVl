@@ -2,6 +2,29 @@
 
 All notable changes to the Solo Leveling System will be documented in this file.
 
+## [3.9.8] - 2025-01-01
+
+### Added
+- **Full Cloud Synchronization**: All game data now syncs across devices automatically:
+  - Daily quests, habits, gates, streaks, and challenges sync to cloud
+  - XP history and user settings persist across devices
+  - Real-time sync on login - play on phone and PC seamlessly
+- **Discord Bot Integration**: Edge function for Discord bot to sync XP and stats:
+  - `bot-sync` endpoint for add_xp, get_stats, sync_stats, link_class, verify_link actions
+  - Unified XP system between Discord bot and web app
+  - Rate-limited to 1000 XP per call for security
+- **New Database Tables**: user_quests, user_habits, user_gates, user_streaks, user_challenges with full RLS
+
+### Fixed
+- **Frame Purchase Bug**: Card frame purchases now sync to cloud immediately (fixes credits deducted but frame locked issue)
+- **AuthContext Discord ID Extraction**: Improved Discord ID extraction using multiple fallback methods (user_metadata, identities array)
+- **Async Auth Blocking**: Fixed potential auth state blocking by deferring Discord linking with setTimeout
+
+### Technical
+- Added `onStatsChange` event emitter for reactive cloud sync
+- Enhanced `useCloudSync` hook with granular sync methods (syncQuests, syncHabits, syncGates, syncStreak)
+- `unlockCardFrame` now returns stats object for immediate cloud sync
+
 ## [3.9.7] - 2025-12-24
 
 ### Security

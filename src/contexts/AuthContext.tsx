@@ -29,108 +29,123 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing session and link Discord ID
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
       
-      // Link Discord ID if signed in with Discord
+      // Link Discord ID if signed in with Discord - defer to avoid blocking
       if (session?.user) {
-        await linkDiscordId(session.user);
+        setTimeout(() => linkDiscordId(session.user), 0);
       }
     });
 
     // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       console.log('Auth event:', _event);
       setSession(session);
       setUser(session?.user ?? null);
       
-      // Link Discord ID on sign in
+      // Link Discord ID on sign in - defer to avoid blocking auth state change
       if (session?.user && _event === 'SIGNED_IN') {
-        await linkDiscordId(session.user);
+        setTimeout(() => linkDiscordId(session.user), 0);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // Helper function to link Discord ID
-  // Helper function to link Discord ID with timeout
-const linkDiscordId = async (user: User) => {
-  // Set a 5-second timeout to prevent infinite loading
-  const timeoutPromise = new Promise((_, reject) => 
-    setTimeout(() => reject(new Error('Discord linking timeout')), 5000)
-  );
-  
-  try {
-    await Promise.race([
-      (async () => {
-        console.log('Checking Discord linking for user:', user.id);
-        
-        // Try multiple ways to get Discord ID
-        let discordId: string | null = null;
-        
-        // Method 1: Check user_metadata
-        if (user.user_metadata?.provider_id) {
-          discordId = user.user_metadata.provider_id;
-          console.log('Found Discord ID in user_metadata:', discordId);
-        }
-        
-        if (!discordId) {
-          console.log('No Discord ID found - user may have signed up with email');
-          return;
-        }
-        
-        // Check if profile exists and needs updating
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('discord_id')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        
-        if (profileError) {
-          console.error('Error fetching profile:', profileError);
-          return;
-        }
-        
-        if (!profile) {
-          console.log('No profile found - will be created by database trigger');
-          return;
-        }
-        
-        // Update Discord ID if missing or empty
-        if (!profile.discord_id || profile.discord_id === '') {
-          console.log('Updating profile with Discord ID:', discordId);
-          
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update({ 
-              discord_id: discordId,
-              updated_at: new Date().toISOString()
-            })
-            .eq('user_id', user.id);
-          
-          if (updateError) {
-            console.error('Error updating Discord ID:', updateError);
-          } else {
-            console.log('✅ Discord ID successfully linked!');
-          }
-        } else {
-          console.log('Discord ID already linked:', profile.discord_id);
-        }
-      })(),
-      timeoutPromise
-    ]);
-  } catch (error) {
-    if (error instanceof Error && error.message === 'Discord linking timeout') {
-      console.warn('⚠️ Discord linking timed out - continuing anyway');
-    } else {
-      console.error('Error in linkDiscordId:', error);
+  // Helper function to extract Discord ID from user object
+  const extractDiscordId = (user: User): string | null => {
+    // Method 1: Check user_metadata.provider_id (most common)
+    if (user.user_metadata?.provider_id) {
+      return user.user_metadata.provider_id;
     }
-  }
-};
+    
+    // Method 2: Check identities array (more reliable for OAuth)
+    const discordIdentity = user.identities?.find(i => i.provider === 'discord');
+    if (discordIdentity?.id) {
+      return discordIdentity.id;
+    }
+    
+    // Method 3: Check for sub in user_metadata (Discord OAuth returns this)
+    if (user.user_metadata?.sub && user.app_metadata?.provider === 'discord') {
+      return user.user_metadata.sub;
+    }
+    
+    return null;
+  };
+
+  // Helper function to link Discord ID with timeout protection
+  const linkDiscordId = async (user: User) => {
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Discord linking timeout')), 5000)
+    );
+    
+    try {
+      await Promise.race([
+        (async () => {
+          console.log('Checking Discord linking for user:', user.id);
+          
+          // Extract Discord ID using multiple methods
+          const discordId = extractDiscordId(user);
+          
+          if (!discordId) {
+            console.log('No Discord ID found - user may have signed up with email');
+            return;
+          }
+          
+          console.log('Found Discord ID:', discordId);
+          
+          // Check if profile exists and needs updating
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('discord_id')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          
+          if (profileError) {
+            console.error('Error fetching profile:', profileError);
+            return;
+          }
+          
+          if (!profile) {
+            console.log('No profile found - will be created by database trigger');
+            return;
+          }
+          
+          // Update Discord ID if missing or empty
+          if (!profile.discord_id || profile.discord_id === '') {
+            console.log('Updating profile with Discord ID:', discordId);
+            
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ 
+                discord_id: discordId,
+                updated_at: new Date().toISOString()
+              })
+              .eq('user_id', user.id);
+            
+            if (updateError) {
+              console.error('Error updating Discord ID:', updateError);
+            } else {
+              console.log('✅ Discord ID successfully linked!');
+            }
+          } else {
+            console.log('Discord ID already linked:', profile.discord_id);
+          }
+        })(),
+        timeoutPromise
+      ]);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Discord linking timeout') {
+        console.warn('⚠️ Discord linking timed out - continuing anyway');
+      } else {
+        console.error('Error in linkDiscordId:', error);
+      }
+    }
+  };
 
   const signUp = async (email: string, password: string, hunterName: string) => {
     const redirectUrl = `${window.location.origin}/`;

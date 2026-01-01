@@ -1,1 +1,4 @@
 project_id = "gdkpmyznxfthobxpyryx"
+
+[functions.bot-sync]
+verify_jwt = false

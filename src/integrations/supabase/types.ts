@@ -559,6 +559,120 @@ export type Database = {
         }
         Relationships: []
       }
+      user_challenges: {
+        Row: {
+          active_boost: Json | null
+          challenges: Json
+          claimed_challenges: Json
+          created_at: string
+          id: string
+          necro_challenge: Json | null
+          updated_at: string
+          user_id: string
+          user_settings: Json
+          xp_history: Json
+        }
+        Insert: {
+          active_boost?: Json | null
+          challenges?: Json
+          claimed_challenges?: Json
+          created_at?: string
+          id?: string
+          necro_challenge?: Json | null
+          updated_at?: string
+          user_id: string
+          user_settings?: Json
+          xp_history?: Json
+        }
+        Update: {
+          active_boost?: Json | null
+          challenges?: Json
+          claimed_challenges?: Json
+          created_at?: string
+          id?: string
+          necro_challenge?: Json | null
+          updated_at?: string
+          user_id?: string
+          user_settings?: Json
+          xp_history?: Json
+        }
+        Relationships: []
+      }
+      user_gates: {
+        Row: {
+          created_at: string
+          gates: Json
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          gates?: Json
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          gates?: Json
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_habits: {
+        Row: {
+          created_at: string
+          habits: Json
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          habits?: Json
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          habits?: Json
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_quests: {
+        Row: {
+          created_at: string
+          id: string
+          last_reset_date: string | null
+          quests: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_reset_date?: string | null
+          quests?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_reset_date?: string | null
+          quests?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -576,6 +690,39 @@ export type Database = {
           created_at?: string | null
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_streaks: {
+        Row: {
+          created_at: string
+          current_streak: number
+          id: string
+          last_completion_date: string | null
+          longest_streak: number
+          total_rewards: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_completion_date?: string | null
+          longest_streak?: number
+          total_rewards?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_completion_date?: string | null
+          longest_streak?: number
+          total_rewards?: number
+          updated_at?: string
           user_id?: string
         }
         Relationships: []

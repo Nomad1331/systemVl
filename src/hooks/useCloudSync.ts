@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { storage, PlayerStats } from '@/lib/storage';
+import { storage, PlayerStats, DailyQuest, Habit, Gate, StreakData, XPHistoryEntry, UserSettings } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
+import { Json } from '@/integrations/supabase/types';
 
 interface CloudProfile {
   id: string;
@@ -19,6 +20,7 @@ interface CloudPlayerStats {
   user_id: string;
   level: number;
   total_xp: number;
+  weekly_xp: number;
   rank: string;
   strength: number;
   agility: number;
@@ -34,19 +36,26 @@ interface CloudPlayerStats {
   unlocked_classes: string[] | null;
 }
 
+// Helper to safely cast JSONB to typed arrays/objects
+const parseJsonb = <T>(data: Json | null, fallback: T): T => {
+  if (data === null || data === undefined) return fallback;
+  return data as unknown as T;
+};
+
 export const useCloudSync = () => {
   const { user, session } = useAuth();
   const { toast } = useToast();
   const [syncing, setSyncing] = useState(false);
   const [cloudProfile, setCloudProfile] = useState<CloudProfile | null>(null);
   const [cloudStats, setCloudStats] = useState<CloudPlayerStats | null>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const syncInProgressRef = useRef(false);
 
   // Fetch cloud data and sync when user logs in
   useEffect(() => {
     if (user) {
       fetchCloudData().then((cloudData) => {
         if (cloudData?.profile && cloudData?.stats) {
-          // Cloud data exists - sync cloud to local
           syncCloudToLocal(cloudData.profile, cloudData.stats);
         } else {
           // No cloud data yet - migrate local to cloud if there's progress
@@ -68,8 +77,8 @@ export const useCloudSync = () => {
 
     try {
       const [profileRes, statsRes] = await Promise.all([
-        supabase.from('profiles').select('*').eq('user_id', user.id).single(),
-        supabase.from('player_stats').select('*').eq('user_id', user.id).single(),
+        supabase.from('profiles').select('*').eq('user_id', user.id).maybeSingle(),
+        supabase.from('player_stats').select('*').eq('user_id', user.id).maybeSingle(),
       ]);
 
       if (profileRes.data) setCloudProfile(profileRes.data);
@@ -82,8 +91,34 @@ export const useCloudSync = () => {
     }
   };
 
+  // Fetch all user data from cloud
+  const fetchAllCloudData = async () => {
+    if (!user) return null;
+
+    try {
+      const [questsRes, habitsRes, gatesRes, streaksRes, challengesRes] = await Promise.all([
+        supabase.from('user_quests').select('*').eq('user_id', user.id).maybeSingle(),
+        supabase.from('user_habits').select('*').eq('user_id', user.id).maybeSingle(),
+        supabase.from('user_gates').select('*').eq('user_id', user.id).maybeSingle(),
+        supabase.from('user_streaks').select('*').eq('user_id', user.id).maybeSingle(),
+        supabase.from('user_challenges').select('*').eq('user_id', user.id).maybeSingle(),
+      ]);
+
+      return {
+        quests: questsRes.data,
+        habits: habitsRes.data,
+        gates: gatesRes.data,
+        streaks: streaksRes.data,
+        challenges: challengesRes.data,
+      };
+    } catch (error) {
+      console.error('Error fetching all cloud data:', error);
+      return null;
+    }
+  };
+
   // Sync cloud data to local storage - only if cloud has more progress
-  const syncCloudToLocal = (profile: CloudProfile, stats: CloudPlayerStats) => {
+  const syncCloudToLocal = async (profile: CloudProfile, stats: CloudPlayerStats) => {
     const currentLocalStats = storage.getStats();
     
     // Calculate total power to determine which data is more progressed
@@ -96,11 +131,7 @@ export const useCloudSync = () => {
                                   (stats.level === currentLocalStats.level && cloudPower > localPower);
     
     // For avatar: prefer local custom image (base64) over cloud, unless cloud also has custom image
-    // Custom images are base64 data URLs that start with "data:"
     const isLocalCustomImage = currentLocalStats.avatar?.startsWith('data:');
-    const isCloudCustomImage = profile.avatar?.startsWith('data:');
-    
-    // Use local avatar if it's a custom image, otherwise use cloud avatar
     const resolvedAvatar = isLocalCustomImage 
       ? currentLocalStats.avatar 
       : (profile.avatar || currentLocalStats.avatar || 'default');
@@ -112,7 +143,6 @@ export const useCloudSync = () => {
       name: profile.hunter_name || currentLocalStats.name,
       avatar: resolvedAvatar,
       title: profile.title || currentLocalStats.title || 'Awakened Hunter',
-      // Only override stats if cloud has more progress
       level: cloudHasMoreProgress ? stats.level : currentLocalStats.level,
       totalXP: cloudHasMoreProgress ? stats.total_xp : currentLocalStats.totalXP,
       rank: cloudHasMoreProgress ? stats.rank : currentLocalStats.rank,
@@ -128,17 +158,84 @@ export const useCloudSync = () => {
       selectedCardFrame: stats.selected_card_frame || currentLocalStats.selectedCardFrame || 'default',
       unlockedCardFrames: stats.unlocked_card_frames || currentLocalStats.unlockedCardFrames || ['default'],
       unlockedClasses: stats.unlocked_classes || currentLocalStats.unlockedClasses || [],
-      isFirstTime: false, // User already has an account, so skip first-time setup
+      isFirstTime: false,
     };
     
     storage.setStats(updatedStats);
+
+    // Fetch and sync all other data from cloud
+    const allCloudData = await fetchAllCloudData();
+    if (allCloudData) {
+      // Sync quests
+      if (allCloudData.quests?.quests) {
+        const cloudQuests = parseJsonb<DailyQuest[]>(allCloudData.quests.quests, []);
+        if (cloudQuests.length > 0) {
+          storage.setQuests(cloudQuests);
+        }
+      }
+
+      // Sync habits
+      if (allCloudData.habits?.habits) {
+        const cloudHabits = parseJsonb<Habit[]>(allCloudData.habits.habits, []);
+        if (cloudHabits.length > 0) {
+          storage.setHabits(cloudHabits);
+        }
+      }
+
+      // Sync gates
+      if (allCloudData.gates?.gates) {
+        const cloudGates = parseJsonb<Gate[]>(allCloudData.gates.gates, []);
+        if (cloudGates.length > 0) {
+          storage.setGates(cloudGates);
+        }
+      }
+
+      // Sync streaks
+      if (allCloudData.streaks) {
+        const streakData: StreakData = {
+          currentStreak: allCloudData.streaks.current_streak,
+          longestStreak: allCloudData.streaks.longest_streak,
+          lastCompletionDate: allCloudData.streaks.last_completion_date,
+          totalRewards: allCloudData.streaks.total_rewards,
+        };
+        storage.setStreak(streakData);
+      }
+
+      // Sync challenges and other data
+      if (allCloudData.challenges) {
+        const challenges = parseJsonb(allCloudData.challenges.challenges, []);
+        const necroChallenge = parseJsonb(allCloudData.challenges.necro_challenge, null);
+        const claimedChallenges = parseJsonb(allCloudData.challenges.claimed_challenges, {});
+        const xpHistory = parseJsonb<XPHistoryEntry[]>(allCloudData.challenges.xp_history, []);
+        const userSettings = parseJsonb<UserSettings>(allCloudData.challenges.user_settings, { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+        const activeBoost = parseJsonb(allCloudData.challenges.active_boost, null);
+
+        if (challenges.length > 0) {
+          localStorage.setItem("soloLevelingChallenges", JSON.stringify(challenges));
+        }
+        if (necroChallenge) {
+          localStorage.setItem("soloLevelingNecroChallenge", JSON.stringify(necroChallenge));
+        }
+        if (Object.keys(claimedChallenges).length > 0) {
+          localStorage.setItem("soloLevelingClaimedChallenges", JSON.stringify(claimedChallenges));
+        }
+        if (xpHistory.length > 0) {
+          storage.setXPHistory(xpHistory);
+        }
+        if (userSettings) {
+          storage.setSettings(userSettings);
+        }
+        if (activeBoost) {
+          localStorage.setItem("soloLevelingActiveBoost", JSON.stringify(activeBoost));
+        }
+      }
+    }
     
     // Trigger a storage event so other components re-read the updated stats
     window.dispatchEvent(new Event('storage'));
     
     // If local had more progress, sync it to cloud
     if (!cloudHasMoreProgress && (currentLocalStats.level > 1 || currentLocalStats.totalXP > 0)) {
-      // Sync local to cloud in background
       setTimeout(() => syncToCloud(updatedStats), 500);
     }
     
@@ -200,6 +297,9 @@ export const useCloudSync = () => {
 
       if (statsError) throw statsError;
 
+      // Migrate all other data
+      await syncAllDataToCloud();
+
       await fetchCloudData();
       
       toast({
@@ -221,8 +321,76 @@ export const useCloudSync = () => {
     }
   };
 
+  // Sync all data to cloud (quests, habits, gates, streaks, challenges)
+  const syncAllDataToCloud = async () => {
+    if (!user || syncInProgressRef.current) return false;
+
+    syncInProgressRef.current = true;
+
+    try {
+      const quests = storage.getQuests();
+      const habits = storage.getHabits();
+      const gates = storage.getGates();
+      const streak = storage.getStreak();
+      const xpHistory = storage.getXPHistory();
+      const userSettings = storage.getSettings();
+      const challenges = JSON.parse(localStorage.getItem("soloLevelingChallenges") || "[]");
+      const necroChallenge = JSON.parse(localStorage.getItem("soloLevelingNecroChallenge") || "null");
+      const claimedChallenges = JSON.parse(localStorage.getItem("soloLevelingClaimedChallenges") || "{}");
+      const activeBoost = JSON.parse(localStorage.getItem("soloLevelingActiveBoost") || "null");
+      const lastReset = storage.getLastReset();
+
+      // Upsert quests
+      await supabase.from('user_quests').upsert({
+        user_id: user.id,
+        quests: quests as unknown as Json,
+        last_reset_date: lastReset || new Date().toISOString().split('T')[0],
+      }, { onConflict: 'user_id' });
+
+      // Upsert habits
+      await supabase.from('user_habits').upsert({
+        user_id: user.id,
+        habits: habits as unknown as Json,
+      }, { onConflict: 'user_id' });
+
+      // Upsert gates
+      await supabase.from('user_gates').upsert({
+        user_id: user.id,
+        gates: gates as unknown as Json,
+      }, { onConflict: 'user_id' });
+
+      // Upsert streaks
+      await supabase.from('user_streaks').upsert({
+        user_id: user.id,
+        current_streak: streak.currentStreak,
+        longest_streak: streak.longestStreak,
+        last_completion_date: streak.lastCompletionDate,
+        total_rewards: streak.totalRewards,
+      }, { onConflict: 'user_id' });
+
+      // Upsert challenges
+      await supabase.from('user_challenges').upsert({
+        user_id: user.id,
+        challenges: challenges as unknown as Json,
+        necro_challenge: necroChallenge as unknown as Json,
+        claimed_challenges: claimedChallenges as unknown as Json,
+        xp_history: xpHistory as unknown as Json,
+        user_settings: userSettings as unknown as Json,
+        active_boost: activeBoost as unknown as Json,
+      }, { onConflict: 'user_id' });
+
+      setLastSyncTime(new Date());
+      syncInProgressRef.current = false;
+      return true;
+    } catch (error) {
+      console.error('Error syncing all data to cloud:', error);
+      syncInProgressRef.current = false;
+      return false;
+    }
+  };
+
   // Sync local stats to cloud
-  const syncToCloud = async (stats: PlayerStats) => {
+  const syncToCloud = useCallback(async (stats: PlayerStats) => {
     if (!user) return false;
 
     try {
@@ -258,12 +426,76 @@ export const useCloudSync = () => {
         })
         .eq('user_id', user.id);
 
+      // Also sync all other data
+      await syncAllDataToCloud();
+
       return true;
     } catch (error) {
       console.error('Error syncing to cloud:', error);
       return false;
     }
-  };
+  }, [user]);
+
+  // Sync specific data types
+  const syncQuests = useCallback(async (quests: DailyQuest[]) => {
+    if (!user) return false;
+    try {
+      await supabase.from('user_quests').upsert({
+        user_id: user.id,
+        quests: quests as unknown as Json,
+        last_reset_date: storage.getLastReset() || new Date().toISOString().split('T')[0],
+      }, { onConflict: 'user_id' });
+      return true;
+    } catch (error) {
+      console.error('Error syncing quests:', error);
+      return false;
+    }
+  }, [user]);
+
+  const syncHabits = useCallback(async (habits: Habit[]) => {
+    if (!user) return false;
+    try {
+      await supabase.from('user_habits').upsert({
+        user_id: user.id,
+        habits: habits as unknown as Json,
+      }, { onConflict: 'user_id' });
+      return true;
+    } catch (error) {
+      console.error('Error syncing habits:', error);
+      return false;
+    }
+  }, [user]);
+
+  const syncGates = useCallback(async (gates: Gate[]) => {
+    if (!user) return false;
+    try {
+      await supabase.from('user_gates').upsert({
+        user_id: user.id,
+        gates: gates as unknown as Json,
+      }, { onConflict: 'user_id' });
+      return true;
+    } catch (error) {
+      console.error('Error syncing gates:', error);
+      return false;
+    }
+  }, [user]);
+
+  const syncStreak = useCallback(async (streak: StreakData) => {
+    if (!user) return false;
+    try {
+      await supabase.from('user_streaks').upsert({
+        user_id: user.id,
+        current_streak: streak.currentStreak,
+        longest_streak: streak.longestStreak,
+        last_completion_date: streak.lastCompletionDate,
+        total_rewards: streak.totalRewards,
+      }, { onConflict: 'user_id' });
+      return true;
+    } catch (error) {
+      console.error('Error syncing streak:', error);
+      return false;
+    }
+  }, [user]);
 
   // Update privacy setting
   const setProfilePublic = async (isPublic: boolean) => {
@@ -297,10 +529,16 @@ export const useCloudSync = () => {
     syncing,
     cloudProfile,
     cloudStats,
+    lastSyncTime,
     fetchCloudData,
     migrateLocalToCloud,
     syncToCloud,
     syncCloudToLocal,
+    syncAllDataToCloud,
+    syncQuests,
+    syncHabits,
+    syncGates,
+    syncStreak,
     setProfilePublic,
   };
 };
