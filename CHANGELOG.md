@@ -2,6 +2,24 @@
 
 All notable changes to the Solo Leveling System will be documented in this file.
 
+## [3.11.0] - 2025-01-06
+
+### Added - Discord Bot Web App Integration Commands
+- **/viewquests** - View today's quests in a numbered list (synced from web app)
+- **/addquest <quest>** - Add a new quest from Discord (auto-analyzed, syncs to web)
+- **/complete <number>** - Mark a quest complete by its number from /viewquests
+- **/habits** - View all active habits and today's completion status
+- **/habitmark <habit_id>** - Mark a habit as complete for today
+- **/streak** - Check current streak status, longest streak, and streak risk warnings
+- **/gates** - View active gates/dungeons in progress
+- **/challenges** - View daily and weekly challenges with progress
+- **/card** - Display your Hunter stats card (text-based embed version)
+
+### Technical
+- Extended `bot-sync` edge function with 8 new actions: `get_quests`, `add_quest`, `complete_quest`, `get_habits`, `complete_habit`, `get_streak`, `get_gates`, `get_challenges`, `get_card_data`
+- Added corresponding sync methods to `database.py` for all new bot commands
+- All commands sync bidirectionally with the web app in real-time
+
 ## [3.10.1] - 2025-01-06
 
 ### Fixed

@@ -3484,6 +3484,455 @@ async def classinfo(ctx):
     await ctx.send(embed=embed)
 
 # -------------------------
+# WEB APP SYNC SLASH COMMANDS
+# -------------------------
+
+@bot.tree.command(name="viewquests", description="View your active quests from the web app")
+async def viewquests_slash(interaction: discord.Interaction):
+    if not await defer_interaction(interaction):
+        return
+    
+    result = await db.get_web_quests(str(interaction.user.id))
+    
+    if not result.get('success'):
+        error = result.get('error', 'Unknown error')
+        if 'not linked' in str(error).lower():
+            await interaction.followup.send(
+                "❌ **Account Not Linked**\n"
+                "Your Discord is not linked to the web app.\n"
+                "👉 Log in at **sololeveling.app** with Discord to link your accounts!"
+            )
+        else:
+            await interaction.followup.send(f"❌ Error: {error}")
+        return
+    
+    quests = result.get('quests', [])
+    
+    if not quests:
+        embed = discord.Embed(
+            title="📋 YOUR QUESTS",
+            description="No active quests!\n\nUse `/addquest` to add a new quest.",
+            color=0x3b82f6
+        )
+        await interaction.followup.send(embed=embed)
+        return
+    
+    embed = discord.Embed(
+        title="📋 YOUR QUESTS",
+        description=f"You have **{len(quests)}** active quests",
+        color=0x3b82f6
+    )
+    
+    for i, quest in enumerate(quests):
+        title = quest.get('title', 'Unnamed Quest')
+        xp = quest.get('xp', 25)
+        gold = quest.get('gold', 10)
+        embed.add_field(
+            name=f"**#{i + 1}** - {title}",
+            value=f"🔮 {xp} XP • 💰 {gold} Gold",
+            inline=False
+        )
+    
+    embed.set_footer(text="Use /complete <number> to complete a quest")
+    await interaction.followup.send(embed=embed)
+
+@bot.tree.command(name="addquest", description="Add a new quest (syncs with web app)")
+async def addquest_slash(interaction: discord.Interaction, quest: str):
+    if not await defer_interaction(interaction):
+        return
+    
+    if len(quest) < 3:
+        await interaction.followup.send("❌ Quest title must be at least 3 characters!")
+        return
+    
+    if len(quest) > 200:
+        await interaction.followup.send("❌ Quest title too long! Max 200 characters.")
+        return
+    
+    result = await db.add_web_quest(str(interaction.user.id), quest)
+    
+    if not result.get('success'):
+        error = result.get('error', 'Unknown error')
+        if 'not linked' in str(error).lower():
+            await interaction.followup.send(
+                "❌ **Account Not Linked**\n"
+                "Your Discord is not linked to the web app.\n"
+                "👉 Log in at **sololeveling.app** with Discord to link your accounts!"
+            )
+        else:
+            await interaction.followup.send(f"❌ Error: {error}")
+        return
+    
+    quest_data = result.get('quest', {})
+    xp = quest_data.get('xp', 25)
+    gold = quest_data.get('gold', 10)
+    
+    embed = discord.Embed(
+        title="✅ QUEST ADDED",
+        description=f"**{quest}**",
+        color=0x22c55e
+    )
+    embed.add_field(name="Rewards", value=f"🔮 {xp} XP • 💰 {gold} Gold", inline=False)
+    embed.set_footer(text="Quest synced to web app! Use /viewquests to see all quests.")
+    
+    await interaction.followup.send(embed=embed)
+
+@bot.tree.command(name="complete", description="Complete a quest by its number from /viewquests")
+async def complete_slash(interaction: discord.Interaction, quest_number: int):
+    if not await defer_interaction(interaction):
+        return
+    
+    if quest_number < 1:
+        await interaction.followup.send("❌ Quest number must be 1 or higher!")
+        return
+    
+    result = await db.complete_web_quest(str(interaction.user.id), quest_number - 1)
+    
+    if not result.get('success'):
+        error = result.get('error', 'Unknown error')
+        if 'not linked' in str(error).lower():
+            await interaction.followup.send(
+                "❌ **Account Not Linked**\n"
+                "Your Discord is not linked to the web app.\n"
+                "👉 Log in at **sololeveling.app** with Discord to link your accounts!"
+            )
+        else:
+            await interaction.followup.send(f"❌ {error}")
+        return
+    
+    quest = result.get('quest', {})
+    xp_earned = result.get('xp_earned', 0)
+    gold_earned = result.get('gold_earned', 0)
+    leveled_up = result.get('leveled_up', False)
+    new_level = result.get('new_level', 0)
+    
+    embed = discord.Embed(
+        title="⚔️ QUEST COMPLETE!",
+        description=f"**{quest.get('title', 'Quest')}**",
+        color=0xf59e0b
+    )
+    embed.add_field(name="Rewards Earned", value=f"🔮 +{xp_earned} XP\n💰 +{gold_earned} Gold", inline=False)
+    
+    if leveled_up:
+        embed.add_field(name="🎉 LEVEL UP!", value=f"You reached **Level {new_level}**!", inline=False)
+    
+    embed.set_footer(text="Synced with web app!")
+    await interaction.followup.send(embed=embed)
+
+@bot.tree.command(name="habits", description="View your active habits for today")
+async def habits_slash(interaction: discord.Interaction):
+    if not await defer_interaction(interaction):
+        return
+    
+    result = await db.get_web_habits(str(interaction.user.id))
+    
+    if not result.get('success'):
+        error = result.get('error', 'Unknown error')
+        if 'not linked' in str(error).lower():
+            await interaction.followup.send(
+                "❌ **Account Not Linked**\n"
+                "Your Discord is not linked to the web app.\n"
+                "👉 Log in at **sololeveling.app** with Discord to link your accounts!"
+            )
+        else:
+            await interaction.followup.send(f"❌ Error: {error}")
+        return
+    
+    habits = result.get('habits', [])
+    completed = result.get('completed_today', 0)
+    total = result.get('total', 0)
+    
+    if not habits:
+        embed = discord.Embed(
+            title="🔄 YOUR HABITS",
+            description="No habits set up!\n\nVisit **sololeveling.app** to create habits.",
+            color=0x8b5cf6
+        )
+        await interaction.followup.send(embed=embed)
+        return
+    
+    embed = discord.Embed(
+        title="🔄 YOUR HABITS",
+        description=f"Progress: **{completed}/{total}** completed today",
+        color=0x8b5cf6
+    )
+    
+    for habit in habits:
+        status = "✅" if habit.get('completed_today') else "⬜"
+        name = habit.get('name', 'Unnamed Habit')
+        xp = habit.get('xp', 15)
+        habit_id = habit.get('id', '')[:8]
+        embed.add_field(
+            name=f"{status} {name}",
+            value=f"🔮 {xp} XP • ID: `{habit_id}`",
+            inline=False
+        )
+    
+    embed.set_footer(text="Use /habitmark <habit_id> to mark a habit complete")
+    await interaction.followup.send(embed=embed)
+
+@bot.tree.command(name="habitmark", description="Mark a habit as complete for today")
+async def habitmark_slash(interaction: discord.Interaction, habit_id: str):
+    if not await defer_interaction(interaction):
+        return
+    
+    result = await db.complete_web_habit(str(interaction.user.id), habit_id)
+    
+    if not result.get('success'):
+        error = result.get('error', 'Unknown error')
+        if 'not linked' in str(error).lower():
+            await interaction.followup.send(
+                "❌ **Account Not Linked**\n"
+                "Your Discord is not linked to the web app.\n"
+                "👉 Log in at **sololeveling.app** with Discord to link your accounts!"
+            )
+        elif 'already completed' in str(error).lower():
+            habit_name = result.get('habit_name', 'Habit')
+            await interaction.followup.send(f"✅ **{habit_name}** is already completed today!")
+        else:
+            await interaction.followup.send(f"❌ {error}")
+        return
+    
+    habit_name = result.get('habit_name', 'Habit')
+    xp_earned = result.get('xp_earned', 0)
+    leveled_up = result.get('leveled_up', False)
+    new_level = result.get('new_level', 0)
+    
+    embed = discord.Embed(
+        title="✅ HABIT COMPLETE!",
+        description=f"**{habit_name}**",
+        color=0x22c55e
+    )
+    embed.add_field(name="XP Earned", value=f"🔮 +{xp_earned} XP", inline=False)
+    
+    if leveled_up:
+        embed.add_field(name="🎉 LEVEL UP!", value=f"You reached **Level {new_level}**!", inline=False)
+    
+    await interaction.followup.send(embed=embed)
+
+@bot.tree.command(name="streak", description="Check your current streak status")
+async def streak_slash(interaction: discord.Interaction):
+    if not await defer_interaction(interaction):
+        return
+    
+    result = await db.get_web_streak(str(interaction.user.id))
+    
+    if not result.get('success'):
+        error = result.get('error', 'Unknown error')
+        if 'not linked' in str(error).lower():
+            await interaction.followup.send(
+                "❌ **Account Not Linked**\n"
+                "Your Discord is not linked to the web app.\n"
+                "👉 Log in at **sololeveling.app** with Discord to link your accounts!"
+            )
+        else:
+            await interaction.followup.send(f"❌ Error: {error}")
+        return
+    
+    current = result.get('current_streak', 0)
+    longest = result.get('longest_streak', 0)
+    status = result.get('status', 'at_risk')
+    total_rewards = result.get('total_rewards', 0)
+    
+    status_emoji = {
+        'safe': '🟢',
+        'pending': '🟡',
+        'at_risk': '🔴'
+    }
+    status_text = {
+        'safe': 'SAFE - Completed today!',
+        'pending': 'PENDING - Complete a quest today!',
+        'at_risk': '⚠️ AT RISK - Complete now or lose streak!'
+    }
+    
+    embed = discord.Embed(
+        title="🔥 STREAK STATUS",
+        color=0xf59e0b if status != 'at_risk' else 0xef4444
+    )
+    
+    embed.add_field(name="Current Streak", value=f"**{current}** days 🔥", inline=True)
+    embed.add_field(name="Longest Streak", value=f"**{longest}** days 🏆", inline=True)
+    embed.add_field(name="Total Rewards", value=f"**{total_rewards}** 💎", inline=True)
+    embed.add_field(
+        name=f"{status_emoji.get(status, '⚪')} Status",
+        value=status_text.get(status, 'Unknown'),
+        inline=False
+    )
+    
+    await interaction.followup.send(embed=embed)
+
+@bot.tree.command(name="gates", description="View your active gates (dungeons)")
+async def gates_slash(interaction: discord.Interaction):
+    if not await defer_interaction(interaction):
+        return
+    
+    result = await db.get_web_gates(str(interaction.user.id))
+    
+    if not result.get('success'):
+        error = result.get('error', 'Unknown error')
+        if 'not linked' in str(error).lower():
+            await interaction.followup.send(
+                "❌ **Account Not Linked**\n"
+                "Your Discord is not linked to the web app.\n"
+                "👉 Log in at **sololeveling.app** with Discord to link your accounts!"
+            )
+        else:
+            await interaction.followup.send(f"❌ Error: {error}")
+        return
+    
+    gates = result.get('gates', [])
+    
+    if not gates:
+        embed = discord.Embed(
+            title="🚪 ACTIVE GATES",
+            description="No active gates!\n\nVisit **sololeveling.app** to enter a gate.",
+            color=0x6366f1
+        )
+        await interaction.followup.send(embed=embed)
+        return
+    
+    embed = discord.Embed(
+        title="🚪 ACTIVE GATES",
+        description=f"You have **{len(gates)}** active gates",
+        color=0x6366f1
+    )
+    
+    rank_colors = {
+        'E': '🟢', 'D': '🔵', 'C': '🟣',
+        'B': '🟠', 'A': '🔴', 'S': '⚫'
+    }
+    
+    for gate in gates:
+        name = gate.get('name', 'Unknown Gate')
+        rank = gate.get('rank', 'E')
+        progress = gate.get('progress', 0)
+        rank_emoji = rank_colors.get(rank, '⚪')
+        embed.add_field(
+            name=f"{rank_emoji} {name}",
+            value=f"Rank: **{rank}** • Progress: **{progress}%**",
+            inline=False
+        )
+    
+    await interaction.followup.send(embed=embed)
+
+@bot.tree.command(name="challenges", description="View your daily and weekly challenges")
+async def challenges_slash(interaction: discord.Interaction):
+    if not await defer_interaction(interaction):
+        return
+    
+    result = await db.get_web_challenges(str(interaction.user.id))
+    
+    if not result.get('success'):
+        error = result.get('error', 'Unknown error')
+        if 'not linked' in str(error).lower():
+            await interaction.followup.send(
+                "❌ **Account Not Linked**\n"
+                "Your Discord is not linked to the web app.\n"
+                "👉 Log in at **sololeveling.app** with Discord to link your accounts!"
+            )
+        else:
+            await interaction.followup.send(f"❌ Error: {error}")
+        return
+    
+    daily = result.get('daily', [])
+    weekly = result.get('weekly', [])
+    
+    embed = discord.Embed(
+        title="🏆 CHALLENGES",
+        color=0xeab308
+    )
+    
+    if daily:
+        daily_text = ""
+        for c in daily[:5]:  # Limit to 5
+            status = "✅" if c.get('completed') else "⬜"
+            title = c.get('title', 'Challenge')
+            progress = c.get('progress', 0)
+            target = c.get('target', 1)
+            daily_text += f"{status} {title} ({progress}/{target})\n"
+        embed.add_field(name="📅 Daily Challenges", value=daily_text or "None", inline=False)
+    else:
+        embed.add_field(name="📅 Daily Challenges", value="No daily challenges", inline=False)
+    
+    if weekly:
+        weekly_text = ""
+        for c in weekly[:3]:  # Limit to 3
+            status = "✅" if c.get('completed') else "⬜"
+            title = c.get('title', 'Challenge')
+            progress = c.get('progress', 0)
+            target = c.get('target', 1)
+            weekly_text += f"{status} {title} ({progress}/{target})\n"
+        embed.add_field(name="📆 Weekly Challenges", value=weekly_text or "None", inline=False)
+    else:
+        embed.add_field(name="📆 Weekly Challenges", value="No weekly challenges", inline=False)
+    
+    await interaction.followup.send(embed=embed)
+
+@bot.tree.command(name="card", description="Generate your Hunter stats card image")
+async def card_slash(interaction: discord.Interaction):
+    if not await defer_interaction(interaction):
+        return
+    
+    result = await db.get_web_card_data(str(interaction.user.id))
+    
+    if not result.get('success'):
+        error = result.get('error', 'Unknown error')
+        if 'not linked' in str(error).lower():
+            await interaction.followup.send(
+                "❌ **Account Not Linked**\n"
+                "Your Discord is not linked to the web app.\n"
+                "👉 Log in at **sololeveling.app** with Discord to link your accounts!"
+            )
+        else:
+            await interaction.followup.send(f"❌ Error: {error}")
+        return
+    
+    # Build a text-based stats card since we can't generate images in Discord bot
+    hunter_name = result.get('hunter_name', 'Hunter')
+    title = result.get('title', 'Awakened Hunter')
+    level = result.get('level', 1)
+    rank = result.get('rank', 'E-Rank')
+    power = result.get('power', 50)
+    stats = result.get('stats', {})
+    gold = result.get('gold', 0)
+    
+    embed = discord.Embed(
+        title=f"🎴 {hunter_name.upper()}",
+        description=f"*{title}*",
+        color=0x7c3aed
+    )
+    
+    # Header info
+    embed.add_field(name="Level", value=f"**{level}**", inline=True)
+    embed.add_field(name="Rank", value=f"**{rank}**", inline=True)
+    embed.add_field(name="Power", value=f"**{power}** ⚡", inline=True)
+    
+    # Stats
+    str_val = stats.get('strength', 10)
+    agi_val = stats.get('agility', 10)
+    int_val = stats.get('intelligence', 10)
+    vit_val = stats.get('vitality', 10)
+    sen_val = stats.get('sense', 10)
+    
+    stats_text = (
+        f"💪 **STR:** {str_val}\n"
+        f"⚡ **AGI:** {agi_val}\n"
+        f"🧠 **INT:** {int_val}\n"
+        f"❤️ **VIT:** {vit_val}\n"
+        f"👁️ **SEN:** {sen_val}"
+    )
+    embed.add_field(name="📊 Stats", value=stats_text, inline=False)
+    
+    # Resources
+    embed.add_field(name="💰 Gold", value=f"{gold:,}", inline=True)
+    embed.add_field(name="💎 Gems", value=f"{result.get('gems', 0):,}", inline=True)
+    embed.add_field(name="🎫 Credits", value=f"{result.get('credits', 0):,}", inline=True)
+    
+    embed.set_footer(text="\"I am a Hunter chosen by The System\"")
+    
+    await interaction.followup.send(embed=embed)
+
+# -------------------------
 # RUN BOT
 # -------------------------
 if __name__ == "__main__":

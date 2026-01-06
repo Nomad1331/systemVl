@@ -1042,3 +1042,253 @@ class Database:
         except Exception as e:
             print(f"❌ Error getting message combo: {e}")
             return 0
+    
+    # =====================================
+    # WEB APP SYNC - QUESTS, HABITS, ETC.
+    # =====================================
+    
+    async def get_web_quests(self, discord_id: str):
+        """Get user's quests from web app."""
+        import config as bot_config
+        
+        if not bot_config.BOT_SYNC_SECRET or not bot_config.SUPABASE_SERVICE_ROLE_KEY:
+            return {"success": False, "error": "Web sync not configured"}
+        
+        url = f"{bot_config.SUPABASE_URL}/functions/v1/bot-sync"
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    url,
+                    json={"discord_id": str(discord_id), "action": "get_quests"},
+                    headers={
+                        "Authorization": f"Bearer {bot_config.SUPABASE_SERVICE_ROLE_KEY}",
+                        "X-Bot-Secret": bot_config.BOT_SYNC_SECRET,
+                        "Content-Type": "application/json"
+                    },
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    return await response.json()
+        except Exception as e:
+            print(f"❌ Get quests error: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def add_web_quest(self, discord_id: str, quest_title: str):
+        """Add a quest via web app."""
+        import config as bot_config
+        
+        if not bot_config.BOT_SYNC_SECRET or not bot_config.SUPABASE_SERVICE_ROLE_KEY:
+            return {"success": False, "error": "Web sync not configured"}
+        
+        url = f"{bot_config.SUPABASE_URL}/functions/v1/bot-sync"
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    url,
+                    json={
+                        "discord_id": str(discord_id),
+                        "action": "add_quest",
+                        "data": {"quest_title": quest_title}
+                    },
+                    headers={
+                        "Authorization": f"Bearer {bot_config.SUPABASE_SERVICE_ROLE_KEY}",
+                        "X-Bot-Secret": bot_config.BOT_SYNC_SECRET,
+                        "Content-Type": "application/json"
+                    },
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    return await response.json()
+        except Exception as e:
+            print(f"❌ Add quest error: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def complete_web_quest(self, discord_id: str, quest_index: int):
+        """Complete a quest via web app."""
+        import config as bot_config
+        
+        if not bot_config.BOT_SYNC_SECRET or not bot_config.SUPABASE_SERVICE_ROLE_KEY:
+            return {"success": False, "error": "Web sync not configured"}
+        
+        url = f"{bot_config.SUPABASE_URL}/functions/v1/bot-sync"
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    url,
+                    json={
+                        "discord_id": str(discord_id),
+                        "action": "complete_quest",
+                        "data": {"quest_index": quest_index}
+                    },
+                    headers={
+                        "Authorization": f"Bearer {bot_config.SUPABASE_SERVICE_ROLE_KEY}",
+                        "X-Bot-Secret": bot_config.BOT_SYNC_SECRET,
+                        "Content-Type": "application/json"
+                    },
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    return await response.json()
+        except Exception as e:
+            print(f"❌ Complete quest error: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def get_web_habits(self, discord_id: str):
+        """Get user's habits from web app."""
+        import config as bot_config
+        
+        if not bot_config.BOT_SYNC_SECRET or not bot_config.SUPABASE_SERVICE_ROLE_KEY:
+            return {"success": False, "error": "Web sync not configured"}
+        
+        url = f"{bot_config.SUPABASE_URL}/functions/v1/bot-sync"
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    url,
+                    json={"discord_id": str(discord_id), "action": "get_habits"},
+                    headers={
+                        "Authorization": f"Bearer {bot_config.SUPABASE_SERVICE_ROLE_KEY}",
+                        "X-Bot-Secret": bot_config.BOT_SYNC_SECRET,
+                        "Content-Type": "application/json"
+                    },
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    return await response.json()
+        except Exception as e:
+            print(f"❌ Get habits error: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def complete_web_habit(self, discord_id: str, habit_id: str):
+        """Complete a habit via web app."""
+        import config as bot_config
+        
+        if not bot_config.BOT_SYNC_SECRET or not bot_config.SUPABASE_SERVICE_ROLE_KEY:
+            return {"success": False, "error": "Web sync not configured"}
+        
+        url = f"{bot_config.SUPABASE_URL}/functions/v1/bot-sync"
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    url,
+                    json={
+                        "discord_id": str(discord_id),
+                        "action": "complete_habit",
+                        "data": {"habit_id": habit_id}
+                    },
+                    headers={
+                        "Authorization": f"Bearer {bot_config.SUPABASE_SERVICE_ROLE_KEY}",
+                        "X-Bot-Secret": bot_config.BOT_SYNC_SECRET,
+                        "Content-Type": "application/json"
+                    },
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    return await response.json()
+        except Exception as e:
+            print(f"❌ Complete habit error: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def get_web_streak(self, discord_id: str):
+        """Get user's streak from web app."""
+        import config as bot_config
+        
+        if not bot_config.BOT_SYNC_SECRET or not bot_config.SUPABASE_SERVICE_ROLE_KEY:
+            return {"success": False, "error": "Web sync not configured"}
+        
+        url = f"{bot_config.SUPABASE_URL}/functions/v1/bot-sync"
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    url,
+                    json={"discord_id": str(discord_id), "action": "get_streak"},
+                    headers={
+                        "Authorization": f"Bearer {bot_config.SUPABASE_SERVICE_ROLE_KEY}",
+                        "X-Bot-Secret": bot_config.BOT_SYNC_SECRET,
+                        "Content-Type": "application/json"
+                    },
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    return await response.json()
+        except Exception as e:
+            print(f"❌ Get streak error: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def get_web_gates(self, discord_id: str):
+        """Get user's gates from web app."""
+        import config as bot_config
+        
+        if not bot_config.BOT_SYNC_SECRET or not bot_config.SUPABASE_SERVICE_ROLE_KEY:
+            return {"success": False, "error": "Web sync not configured"}
+        
+        url = f"{bot_config.SUPABASE_URL}/functions/v1/bot-sync"
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    url,
+                    json={"discord_id": str(discord_id), "action": "get_gates"},
+                    headers={
+                        "Authorization": f"Bearer {bot_config.SUPABASE_SERVICE_ROLE_KEY}",
+                        "X-Bot-Secret": bot_config.BOT_SYNC_SECRET,
+                        "Content-Type": "application/json"
+                    },
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    return await response.json()
+        except Exception as e:
+            print(f"❌ Get gates error: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def get_web_challenges(self, discord_id: str):
+        """Get user's challenges from web app."""
+        import config as bot_config
+        
+        if not bot_config.BOT_SYNC_SECRET or not bot_config.SUPABASE_SERVICE_ROLE_KEY:
+            return {"success": False, "error": "Web sync not configured"}
+        
+        url = f"{bot_config.SUPABASE_URL}/functions/v1/bot-sync"
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    url,
+                    json={"discord_id": str(discord_id), "action": "get_challenges"},
+                    headers={
+                        "Authorization": f"Bearer {bot_config.SUPABASE_SERVICE_ROLE_KEY}",
+                        "X-Bot-Secret": bot_config.BOT_SYNC_SECRET,
+                        "Content-Type": "application/json"
+                    },
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    return await response.json()
+        except Exception as e:
+            print(f"❌ Get challenges error: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def get_web_card_data(self, discord_id: str):
+        """Get user's stats card data from web app."""
+        import config as bot_config
+        
+        if not bot_config.BOT_SYNC_SECRET or not bot_config.SUPABASE_SERVICE_ROLE_KEY:
+            return {"success": False, "error": "Web sync not configured"}
+        
+        url = f"{bot_config.SUPABASE_URL}/functions/v1/bot-sync"
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    url,
+                    json={"discord_id": str(discord_id), "action": "get_card_data"},
+                    headers={
+                        "Authorization": f"Bearer {bot_config.SUPABASE_SERVICE_ROLE_KEY}",
+                        "X-Bot-Secret": bot_config.BOT_SYNC_SECRET,
+                        "Content-Type": "application/json"
+                    },
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    return await response.json()
+        except Exception as e:
+            print(f"❌ Get card data error: {e}")
+            return {"success": False, "error": str(e)}
