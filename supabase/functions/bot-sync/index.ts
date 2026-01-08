@@ -534,8 +534,8 @@ serve(async (req) => {
         const habits = habitData?.habits || [];
         const today = new Date().toISOString().split('T')[0];
         
-        // Filter to only active goals (status = 'active' or not set, and not completed/failed)
-        // Goals have: status ('active', 'completed', 'failed'), completedDates array
+        // Filter to only active goals (status = 'active')
+        // Web app Habit interface uses: completionGrid: Record<string, boolean>
         const activeHabits = Array.isArray(habits) ? habits.filter((h: { 
           status?: string;
         }) => {
@@ -543,24 +543,35 @@ serve(async (req) => {
           return status === 'active';
         }) : [];
         
-        // Process active habits to show today's completion status
-        const processedHabits = activeHabits.map((h: { 
+        // Process active habits - filter out those already completed today
+        // Web app uses completionGrid[date] = true/false
+        const todayHabits = activeHabits.filter((h: { 
           id: string; 
           name: string; 
-          completedDates?: string[];
-          xpReward?: number;
+          completionGrid?: Record<string, boolean>;
+        }) => {
+          // Check if completed today using completionGrid
+          return !h.completionGrid?.[today];
+        });
+        
+        const processedHabits = todayHabits.map((h: { 
+          id: string; 
+          name: string; 
+          winXP?: number;
+          goalDays?: number;
+          icon?: string;
         }) => ({
           id: h.id,
           name: h.name,
-          completed_today: h.completedDates?.includes(today) || false,
-          xp: h.xpReward || 15,
+          icon: h.icon || '🌱',
+          xp: 15, // Fixed daily XP reward for completing a habit
         }));
 
         result = {
           success: true,
           habits: processedHabits,
-          total: processedHabits.length,
-          completed_today: processedHabits.filter((h: { completed_today: boolean }) => h.completed_today).length,
+          total: activeHabits.length,
+          remaining_today: processedHabits.length,
         };
         break;
       }
@@ -592,26 +603,33 @@ serve(async (req) => {
           return status === 'active';
         });
         
+        // Filter to habits not completed today
+        const todayActiveHabits = activeHabits.filter((h: { completionGrid?: Record<string, boolean> }) => {
+          return !h.completionGrid?.[today];
+        });
+        
         interface HabitType {
           id: string;
           name: string;
+          icon?: string;
           status?: string;
-          completedDates?: string[];
-          xpReward?: number;
+          completionGrid?: Record<string, boolean>;
+          winXP?: number;
+          goalDays?: number;
         }
         
         let targetHabit: HabitType | null = null;
         let targetHabitIndex = -1;
         
         if (habitIndex !== undefined) {
-          // Find by index in active habits list
-          if (habitIndex < 0 || habitIndex >= activeHabits.length) {
+          // Find by index in today's active habits list
+          if (habitIndex < 0 || habitIndex >= todayActiveHabits.length) {
             return new Response(
-              JSON.stringify({ error: `Habit #${habitIndex + 1} not found. You have ${activeHabits.length} active habits.` }),
+              JSON.stringify({ error: `Habit #${habitIndex + 1} not found. You have ${todayActiveHabits.length} habits remaining today.` }),
               { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
           }
-          targetHabit = activeHabits[habitIndex] as HabitType;
+          targetHabit = todayActiveHabits[habitIndex] as HabitType;
           // Find the original index in the full habits array
           targetHabitIndex = habits.findIndex((h: { id: string }) => h.id === targetHabit!.id);
         } else {
@@ -633,7 +651,8 @@ serve(async (req) => {
           );
         }
 
-        const alreadyCompleted = targetHabit.completedDates?.includes(today);
+        // Check if already completed using completionGrid
+        const alreadyCompleted = targetHabit.completionGrid?.[today] === true;
         
         if (alreadyCompleted) {
           return new Response(
@@ -642,11 +661,14 @@ serve(async (req) => {
           );
         }
 
-        // Mark habit as completed for today
+        // Mark habit as completed for today using completionGrid (matching web app format)
         const updatedHabits = [...habits];
         updatedHabits[targetHabitIndex] = {
           ...targetHabit,
-          completedDates: [...(targetHabit.completedDates || []), today],
+          completionGrid: {
+            ...(targetHabit.completionGrid || {}),
+            [today]: true,
+          },
         };
 
         const { error: updateError } = await supabase
@@ -662,10 +684,10 @@ serve(async (req) => {
           );
         }
 
-        // Award XP
-        const xpReward = targetHabit.xpReward || 15;
-        const newTotalXP = playerStats.total_xp + xpReward;
-        const newWeeklyXP = playerStats.weekly_xp + xpReward;
+        // Award XP - use a reasonable daily reward (winXP is for completing the whole goal)
+        const dailyXpReward = 15; // Fixed daily reward for habit completion
+        const newTotalXP = playerStats.total_xp + dailyXpReward;
+        const newWeeklyXP = playerStats.weekly_xp + dailyXpReward;
 
         let newLevel = playerStats.level;
         while (100 * newLevel * (newLevel + 1) / 2 <= newTotalXP) {
@@ -682,90 +704,8 @@ serve(async (req) => {
         result = {
           success: true,
           habit_name: targetHabit.name,
-          xp_earned: xpReward,
-          new_level: newLevel,
-          leveled_up: newLevel > playerStats.level,
-        };
-        break;
-      }
-
-      case 'complete_habit': {
-        const habitId = data?.habit_id;
-        if (!habitId) {
-          return new Response(
-            JSON.stringify({ error: 'Missing habit_id' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
-        const { data: habitData, error: habitError } = await supabase
-          .from('user_habits')
-          .select('habits')
-          .eq('user_id', profile.user_id)
-          .maybeSingle();
-
-        const habits = Array.isArray(habitData?.habits) ? habitData.habits : [];
-        const today = new Date().toISOString().split('T')[0];
-        
-        const habitIndex = habits.findIndex((h: { id: string }) => h.id === habitId);
-        if (habitIndex === -1) {
-          return new Response(
-            JSON.stringify({ error: 'Habit not found' }),
-            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
-        const habit = habits[habitIndex];
-        const alreadyCompleted = habit.completedDates?.includes(today);
-        
-        if (alreadyCompleted) {
-          return new Response(
-            JSON.stringify({ error: 'Habit already completed today', habit_name: habit.name }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
-        // Mark habit as completed for today
-        const updatedHabits = [...habits];
-        updatedHabits[habitIndex] = {
-          ...habit,
-          completedDates: [...(habit.completedDates || []), today],
-        };
-
-        const { error: updateError } = await supabase
-          .from('user_habits')
-          .update({ habits: updatedHabits, updated_at: new Date().toISOString() })
-          .eq('user_id', profile.user_id);
-
-        if (updateError) {
-          console.error('Error completing habit:', updateError);
-          return new Response(
-            JSON.stringify({ error: 'Failed to complete habit' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
-        // Award XP
-        const xpReward = habit.xpReward || 15;
-        const newTotalXP = playerStats.total_xp + xpReward;
-        const newWeeklyXP = playerStats.weekly_xp + xpReward;
-
-        let newLevel = playerStats.level;
-        while (100 * newLevel * (newLevel + 1) / 2 <= newTotalXP) {
-          newLevel += 1;
-        }
-
-        await supabase
-          .from('player_stats')
-          .update({ total_xp: newTotalXP, weekly_xp: newWeeklyXP, level: newLevel })
-          .eq('user_id', profile.user_id);
-
-        console.log(`Completed habit for ${profile.hunter_name}: ${habit.name}`);
-
-        result = {
-          success: true,
-          habit_name: habit.name,
-          xp_earned: xpReward,
+          habit_icon: targetHabit.icon || '🌱',
+          xp_earned: dailyXpReward,
           new_level: newLevel,
           leveled_up: newLevel > playerStats.level,
         };

@@ -2,6 +2,25 @@
 
 All notable changes to the Solo Leveling System will be documented in this file.
 
+## [3.11.3] - 2025-01-08
+
+### Fixed
+- **"Test lost" Toast Spam**: Fixed defeated habit toast appearing repeatedly on every page load
+  - Now tracks which defeat toasts have been shown to prevent duplicates
+  - Only shows defeat notification once per habit
+- **Discord Habit Completion Not Syncing**: Fixed habit completions from Discord not reflecting in web app
+  - Root cause: Discord bot was using `completedDates` array but web app uses `completionGrid` object
+  - Edge function now correctly updates `completionGrid[date] = true` matching web app format
+- **Avatar/Frame Inconsistency Across Devices**: Fixed different avatars/frames showing on different devices
+  - Cloud is now the source of truth for avatar and frame selection
+  - `selectedCardFrame` always synced from cloud for consistency
+  - Custom base64 avatars only override cloud when cloud doesn't have one
+- **Duplicate complete_habit Case**: Removed duplicate switch case in edge function
+
+### Improved
+- **Habits Command**: `/habits` now only shows habits that haven't been completed today
+- **Cloud Sync**: Avatar and frame selection now consistent across all devices/browsers
+
 ## [3.11.2] - 2025-01-07
 
 ### Changed
