@@ -56,6 +56,21 @@ const incrementHabitsCreatedToday = () => {
   localStorage.setItem(CREATION_COOLDOWN_KEY, JSON.stringify({ date: today, count: currentCount + 1 }));
 };
 
+// Key for tracking which habits we've already shown defeat toasts for
+const SHOWN_DEFEAT_TOASTS_KEY = "soloLevelingShownDefeatToasts";
+
+const getShownDefeatToasts = (): string[] => {
+  const stored = localStorage.getItem(SHOWN_DEFEAT_TOASTS_KEY);
+  return stored ? JSON.parse(stored) : [];
+};
+
+const markDefeatToastShown = (habitId: string) => {
+  const shown = getShownDefeatToasts();
+  if (!shown.includes(habitId)) {
+    localStorage.setItem(SHOWN_DEFEAT_TOASTS_KEY, JSON.stringify([...shown, habitId]));
+  }
+};
+
 const Habits = () => {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [newHabit, setNewHabit] = useState({
@@ -66,14 +81,18 @@ const Habits = () => {
   });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { addXP } = usePlayerStats();
+  const [hasCheckedHabits, setHasCheckedHabits] = useState(false);
 
   useEffect(() => {
     const loadedHabits = storage.getHabits();
     setHabits(loadedHabits);
     
-    // Auto-check for completed habits and determine win/loss
-    checkAndFinalizeHabits(loadedHabits);
-  }, []);
+    // Only auto-check habits once on initial load
+    if (!hasCheckedHabits) {
+      checkAndFinalizeHabits(loadedHabits);
+      setHasCheckedHabits(true);
+    }
+  }, [hasCheckedHabits]);
 
   const saveHabits = (updatedHabits: Habit[]) => {
     storage.setHabits(updatedHabits);
@@ -209,7 +228,9 @@ const Habits = () => {
     if (updated) {
       saveHabits(updatedHabits);
       
-      // Award/deduct XP and show toasts
+      // Award/deduct XP and show toasts (only for habits we haven't shown toasts for)
+      const shownDefeatToasts = getShownDefeatToasts();
+      
       habitsToFinalize.forEach(({ habit, won }) => {
         if (won) {
           addXP(habit.winXP, {
@@ -222,16 +243,20 @@ const Habits = () => {
             duration: 5000,
           });
         } else {
-          addXP(-habit.loseXP, {
-            type: "habit",
-            description: `${habit.icon} ${habit.name} - Defeated`
-          });
-          toast({
-            title: "💀 Defeated",
-            description: `${habit.icon} ${habit.name} lost. -${habit.loseXP} XP`,
-            variant: "destructive",
-            duration: 5000,
-          });
+          // Only show defeat toast if we haven't shown it before
+          if (!shownDefeatToasts.includes(habit.id)) {
+            addXP(-habit.loseXP, {
+              type: "habit",
+              description: `${habit.icon} ${habit.name} - Defeated`
+            });
+            toast({
+              title: "💀 Defeated",
+              description: `${habit.icon} ${habit.name} lost. -${habit.loseXP} XP`,
+              variant: "destructive",
+              duration: 5000,
+            });
+            markDefeatToastShown(habit.id);
+          }
         }
       });
     }

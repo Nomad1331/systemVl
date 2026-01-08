@@ -130,9 +130,14 @@ export const useCloudSync = () => {
                                   stats.total_xp > currentLocalStats.totalXP ||
                                   (stats.level === currentLocalStats.level && cloudPower > localPower);
     
-    // For avatar: prefer local custom image (base64) over cloud, unless cloud also has custom image
+    // For avatar: prefer cloud avatar UNLESS local has a custom base64 image that cloud doesn't have
+    // Cloud should be the source of truth for avatar selection across devices
     const isLocalCustomImage = currentLocalStats.avatar?.startsWith('data:');
-    const resolvedAvatar = isLocalCustomImage 
+    const isCloudCustomImage = profile.avatar?.startsWith('data:');
+    
+    // Use cloud avatar if: cloud has custom image, OR local doesn't have custom image
+    // Only use local if local has custom image AND cloud doesn't
+    const resolvedAvatar = (isLocalCustomImage && !isCloudCustomImage)
       ? currentLocalStats.avatar 
       : (profile.avatar || currentLocalStats.avatar || 'default');
     
@@ -148,8 +153,9 @@ export const useCloudSync = () => {
       ...(currentLocalStats.unlockedClasses || []),
     ])];
     
-    // Always sync profile data (name, avatar, title) from cloud
-    // But for stats, only sync if cloud has more progress
+    // ALWAYS sync profile data (name, avatar, title, frame selection) from cloud
+    // Cloud is the source of truth for these settings to ensure consistency across devices
+    // For stats, only sync if cloud has more progress
     const updatedStats = {
       ...currentLocalStats,
       name: profile.hunter_name || currentLocalStats.name,
@@ -167,8 +173,9 @@ export const useCloudSync = () => {
       gold: cloudHasMoreProgress ? stats.gold : currentLocalStats.gold,
       gems: cloudHasMoreProgress ? stats.gems : currentLocalStats.gems,
       credits: cloudHasMoreProgress ? stats.credits : currentLocalStats.credits,
-      // Use cloud frame selection, but ALWAYS use merged unlocked frames to prevent loss
+      // ALWAYS use cloud frame selection for consistency across devices
       selectedCardFrame: stats.selected_card_frame || currentLocalStats.selectedCardFrame || 'default',
+      // ALWAYS use merged unlocked frames to prevent loss
       unlockedCardFrames: mergedUnlockedFrames,
       unlockedClasses: mergedUnlockedClasses,
       isFirstTime: false,
