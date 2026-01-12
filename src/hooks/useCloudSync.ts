@@ -376,13 +376,11 @@ export const useCloudSync = () => {
       const lastReset = localStorage.getItem("soloLevelingLastReset");
 
       if (quests !== null) {
-        const questPayload: Record<string, unknown> = {
+        await supabase.from('user_quests').upsert({
           user_id: user.id,
           quests: quests as unknown as Json,
-        };
-        if (lastReset) questPayload.last_reset_date = lastReset;
-
-        await supabase.from('user_quests').upsert(questPayload, { onConflict: 'user_id' });
+          last_reset_date: lastReset || undefined,
+        }, { onConflict: 'user_id' });
       }
 
       if (habits !== null) {
