@@ -2,6 +2,17 @@
 
 All notable changes to the Solo Leveling System will be documented in this file.
 
+## [3.13.4] - 2026-01-12
+
+### Fixed - CRITICAL
+- **Quests randomly disappearing / resetting to defaults**: `syncAllDataToCloud()` was reading `storage.getQuests()` which returns DEFAULT_QUESTS when localStorage is empty—this would **overwrite real cloud quests with defaults** on login/sync. Now we only push data when localStorage explicitly contains it.
+- **Quest completion undoing itself**: `last_reset_date` was computed in UTC (`toISOString().split('T')[0]`), which differs from a user's local date in many timezones. This caused the app to think a "new day" started repeatedly, resetting quest completions. Now dates are computed in the user's timezone.
+
+### Technical
+- `useCloudSync.syncAllDataToCloud()` now reads raw localStorage keys; if missing it does **not** send anything (prevents default pollution).
+- `useCloudSync.syncCloudToLocal()` now also syncs empty arrays/objects to localStorage (prevents stale local defaults from reappearing).
+- `useCloudQuests` uses `getTodayInTimezone()` helper everywhere for consistency.
+
 ## [3.13.3] - 2025-01-11
 
 ### Fixed - CRITICAL
