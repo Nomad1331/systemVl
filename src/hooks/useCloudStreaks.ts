@@ -10,6 +10,17 @@ const DEFAULT_STREAK: StreakData = {
   totalRewards: 0,
 };
 
+// Helper to format a date in a specific timezone (YYYY-MM-DD)
+const formatDateInTimezone = (date: Date, timezone?: string): string => {
+  const tz = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+};
+
 export const useCloudStreaks = () => {
   const { user } = useAuth();
   const [streak, setStreak] = useState<StreakData>(DEFAULT_STREAK);

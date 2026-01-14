@@ -2,6 +2,15 @@
 
 All notable changes to the Solo Leveling System will be documented in this file.
 
+## [3.13.7] - 2026-01-14
+
+### Fixed - CRITICAL
+- **TypeScript compilation errors**: Added missing `formatDateInTimezone` helper to `useCloudStreaks.ts` and properly destructured `streakInitialized`/`userSettings` in `ChallengesPanel.tsx`.
+- **Necromancer challenge false failure detection**: Now correctly waits for streak data to hydrate before evaluating failure conditions, preventing false "contract broken" resets in secondary tabs/windows.
+
+### Updated
+- **PROJECT_CONTEXT.md**: Added "No Permission Needed" rule and updated to reflect cloud-first architecture.
+
 ## [3.13.6] - 2026-01-14
 
 ### Fixed - CRITICAL
