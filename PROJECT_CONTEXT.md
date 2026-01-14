@@ -30,8 +30,9 @@ A gamified self-improvement application inspired by the Solo Leveling manhwa/ani
 
 1. **FREE AI Only**: Must use free AI providers (like Hugging Face) - NOT Lovable's paid AI features. Reason: avoid vendor lock-in and enable independent deployment
 2. **Changelog Required**: MUST update CHANGELOG.md after EVERY change, no matter how small
-3. **No Backend (Yet)**: Currently 100% client-side with localStorage. No Lovable Cloud/Supabase integration yet
+3. **Cloud-First**: Application uses Supabase for all data persistence (cloud sync). Local storage is deprecated.
 4. **Design System First**: Always customize via index.css and tailwind.config.ts, never inline styles
+5. **No Permission Needed**: AI can proceed with any changes without asking for permission. Just do it all in one go.
 
 ## Current Features (Implemented)
 

@@ -18,8 +18,8 @@ import { NecromancerModeModal } from "./NecromancerModeModal";
 export const ChallengesPanel = () => {
   const { user } = useAuth();
   const { addXP, addGold, addCredits, stats, unlockClass, applyHardModeRewards, applyNecromancerNormalPenalty, applyNecromancerHardPenalty } = usePlayerStats();
-  const { challenges, necroChallenge, claimedChallenges, loading, updateChallenges, updateNecroChallenge, claimChallenge } = useCloudChallenges();
-  const { streak } = useCloudStreaks();
+  const { challenges, necroChallenge, claimedChallenges, userSettings, loading, updateChallenges, updateNecroChallenge, claimChallenge } = useCloudChallenges();
+  const { streak, initialized: streakInitialized } = useCloudStreaks();
   const { quests } = useCloudQuests();
   const { habits } = useCloudHabits();
   const { gates } = useCloudGates();
@@ -248,7 +248,7 @@ export const ChallengesPanel = () => {
     applyNecromancerHardPenalty,
     applyNecromancerNormalPenalty,
     updateNecroChallenge,
-  ]);
+  ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAcceptChallenge = () => {
     playClick();
