@@ -1122,10 +1122,11 @@ async def link(ctx):
             description=(
                 "Connect your Discord to the Solo Leveling web app!\n\n"
                 "**Easiest Method - Discord OAuth:**\n"
-                "1. Go to: https://sololevelling-app.vercel.app/auth\n"
-                "2. Click **Continue with Discord**\n"
-                "3. Authorize the app\n"
-                "4. Your accounts will be linked automatically!\n\n"
+                "1. Go to: https://sololevelling-app.vercel.app/\n"
+                "2. Click your profile icon in the top right corner\n"
+                "3. Click Link Discord\n"
+                "4. Authorize the app\n\n"
+                "5. Your accounts will be linked automatically!\n"
                 "**Why link?**\n"
                 "• View your real progress in Discord\n"
                 "• Get XP for completing actual quests\n"
@@ -1134,7 +1135,7 @@ async def link(ctx):
             ),
             color=0x00d4ff
         )
-        embed.set_footer(text=f"Your Discord ID: {discord_id}")
+        embed.set_footer(text=f"Your Discord ID: `{discord_id}`")
         
         await ctx.send(embed=embed)
 
@@ -1537,7 +1538,7 @@ async def stats_slash(interaction: discord.Interaction, member: discord.Member =
         await ctx.send(
             "❌ **Account Not Linked**\n"
             "Your Discord is not linked to the web app.\n"
-            "👉 Log in at **sololeveling.app** with Discord to link your accounts!"
+            "👉 Log in at **https://sololevelling-app.vercel.app/** with Discord to link your accounts!"
         )
         return
     
@@ -1589,7 +1590,7 @@ async def stats_slash(interaction: discord.Interaction, member: discord.Member =
         inline=True
     )
     
-    embed.set_footer(text="Solo Leveling System • sololeveling.app")
+    embed.set_footer(text="Solo Leveling System • https://sololevelling-app.vercel.app/")
     
     await ctx.send(embed=embed)
 
@@ -1658,7 +1659,7 @@ async def chooseclass_slash(interaction: discord.Interaction):
             await interaction.followup.send(
                 "❌ **Account Not Linked**\n"
                 "Your Discord is not linked to the web app.\n"
-                "👉 Log in at **sololeveling.app** with Discord to link your accounts!"
+                "👉 Log in at **https://sololevelling-app.vercel.app/** with Discord to link your accounts!"
             )
         else:
             await interaction.followup.send(f"❌ Error: {error}")
@@ -3706,7 +3707,7 @@ async def viewquests_slash(interaction: discord.Interaction):
             await interaction.followup.send(
                 "❌ **Account Not Linked**\n"
                 "Your Discord is not linked to the web app.\n"
-                "👉 Log in at **sololeveling.app** with Discord to link your accounts!"
+                "👉 Log in at **https://sololevelling-app.vercel.app/** with Discord to link your accounts!"
             )
         else:
             await interaction.followup.send(f"❌ Error: {error}")
@@ -3766,7 +3767,7 @@ async def addquest_slash(interaction: discord.Interaction, quest: str):
             await interaction.followup.send(
                 "❌ **Account Not Linked**\n"
                 "Your Discord is not linked to the web app.\n"
-                "👉 Log in at **sololeveling.app** with Discord to link your accounts!"
+                "👉 Log in at **https://sololevelling-app.vercel.app/** with Discord to link your accounts!"
             )
         else:
             await interaction.followup.send(f"❌ Error: {error}")
@@ -3804,7 +3805,7 @@ async def complete_slash(interaction: discord.Interaction, quest_number: int):
             await interaction.followup.send(
                 "❌ **Account Not Linked**\n"
                 "Your Discord is not linked to the web app.\n"
-                "👉 Log in at **sololeveling.app** with Discord to link your accounts!"
+                "👉 Log in at **https://sololevelling-app.vercel.app/** with Discord to link your accounts!"
             )
         else:
             await interaction.followup.send(f"❌ {error}")
@@ -3846,7 +3847,7 @@ async def habits_slash(interaction: discord.Interaction):
             await interaction.followup.send(
                 "❌ **Account Not Linked**\n"
                 "Your Discord is not linked to the web app.\n"
-                "👉 Log in at **sololeveling.app** with Discord to link your accounts!"
+                "👉 Log in at **https://sololevelling-app.vercel.app/** with Discord to link your accounts!"
             )
         else:
             await interaction.followup.send(f"❌ Error: {error}")
@@ -3868,7 +3869,7 @@ async def habits_slash(interaction: discord.Interaction):
         else:
             embed = discord.Embed(
                 title="🔄 YOUR HABITS",
-                description="No active habits!\n\nVisit **sololeveling.app** to create habits.",
+                description="No active habits!\n\nVisit **https://sololevelling-app.vercel.app/** to create habits.",
                 color=0x8b5cf6
             )
         await interaction.followup.send(embed=embed)
@@ -3909,7 +3910,7 @@ async def habitmark_slash(interaction: discord.Interaction, habit_number: int):
             await interaction.followup.send(
                 "❌ **Account Not Linked**\n"
                 "Your Discord is not linked to the web app.\n"
-                "👉 Log in at **sololeveling.app** with Discord to link your accounts!"
+                "👉 Log in at **https://sololevelling-app.vercel.app/** with Discord to link your accounts!"
             )
         elif 'already completed' in str(error).lower():
             habit_name = result.get('habit_name', 'Habit')
@@ -3948,7 +3949,7 @@ async def streak_slash(interaction: discord.Interaction):
             await interaction.followup.send(
                 "❌ **Account Not Linked**\n"
                 "Your Discord is not linked to the web app.\n"
-                "👉 Log in at **sololeveling.app** with Discord to link your accounts!"
+                "👉 Log in at **https://sololevelling-app.vercel.app/** with Discord to link your accounts!"
             )
         else:
             await interaction.followup.send(f"❌ Error: {error}")
@@ -3999,7 +4000,7 @@ async def gates_slash(interaction: discord.Interaction):
             await interaction.followup.send(
                 "❌ **Account Not Linked**\n"
                 "Your Discord is not linked to the web app.\n"
-                "👉 Log in at **sololeveling.app** with Discord to link your accounts!"
+                "👉 Log in at **https://sololevelling-app.vercel.app/** with Discord to link your accounts!"
             )
         else:
             await interaction.followup.send(f"❌ Error: {error}")
@@ -4010,7 +4011,7 @@ async def gates_slash(interaction: discord.Interaction):
     if not gates:
         embed = discord.Embed(
             title="🚪 ACTIVE GATES",
-            description="No active gates!\n\nVisit **sololeveling.app** to enter a gate.",
+            description="No active gates!\n\nVisit **https://sololevelling-app.vercel.app/** to enter a gate.",
             color=0x6366f1
         )
         await interaction.followup.send(embed=embed)
@@ -4053,7 +4054,7 @@ async def challenges_slash(interaction: discord.Interaction):
             await interaction.followup.send(
                 "❌ **Account Not Linked**\n"
                 "Your Discord is not linked to the web app.\n"
-                "👉 Log in at **sololeveling.app** with Discord to link your accounts!"
+                "👉 Log in at **https://sololevelling-app.vercel.app/** with Discord to link your accounts!"
             )
         else:
             await interaction.followup.send(f"❌ Error: {error}")
@@ -4106,7 +4107,7 @@ async def card_slash(interaction: discord.Interaction):
             await interaction.followup.send(
                 "❌ **Account Not Linked**\n"
                 "Your Discord is not linked to the web app.\n"
-                "👉 Log in at **sololeveling.app** with Discord to link your accounts!"
+                "👉 Log in at **https://sololevelling-app.vercel.app/** with Discord to link your accounts!"
             )
         else:
             await interaction.followup.send(f"❌ Error: {error}")
@@ -4127,7 +4128,7 @@ async def card_slash(interaction: discord.Interaction):
             f"*{title}*\n\n"
             f"**📊 Level {level}** • **{rank}** • **⚡ {power} Power**\n\n"
             "🌐 **View your full stats card with custom frames at:**\n"
-            "👉 **sololeveling.app** → Click **Share Stats** or **Download 4K Card**\n\n"
+            "👉 **https://sololevelling-app.vercel.app/** → Click **Share Stats** or **Download 4K Card**\n\n"
             "*The web app card includes your equipped frame, avatar, and full visual design!*"
         ),
         color=0x7c3aed
@@ -4231,7 +4232,7 @@ async def post_level_up_to_discord(hunter_name: str, new_level: int, rank: str, 
             "content": content,
             "embeds": [embed],
             "username": "The System",
-            "avatar_url": "https://i.imgur.com/7cL5Xr8.png"  # System avatar
+            "avatar_url": "https://cdn.discordapp.com/app-icons/1451280088468422882/67f6c2f88bbd8935d9f3bca4a0109468.png?size=256"  # System avatar
         }
         
         async with aiohttp.ClientSession() as session:
@@ -4268,7 +4269,7 @@ async def post_achievement_to_discord(hunter_name: str, achievement_name: str, a
         payload = {
             "embeds": [embed],
             "username": "The System",
-            "avatar_url": "https://i.imgur.com/7cL5Xr8.png"
+            "avatar_url": "https://cdn.discordapp.com/app-icons/1451280088468422882/67f6c2f88bbd8935d9f3bca4a0109468.png?size=256"
         }
         
         async with aiohttp.ClientSession() as session:
