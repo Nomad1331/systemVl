@@ -3,7 +3,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X, Users, Trophy, MessageCircle, Zap } from "lucide-react";
 
-const DISCORD_INVITE_URL = "https://discord.gg/8geBVTC4";
+const DISCORD_INVITE_URL = "https://discord.gg/QKtPmcEqeU";
 const DISCORD_SEEN_KEY = "solo-leveling-discord-invite-seen";
 
 interface DiscordInviteModalProps {
