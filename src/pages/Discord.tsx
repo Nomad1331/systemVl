@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Trophy, MessageCircle, Zap, Bot, Bell, Shield, ExternalLink } from "lucide-react";
 
-const DISCORD_INVITE_URL = "https://discord.gg/8geBVTC4";
+const DISCORD_INVITE_URL = "https://discord.gg/QKtPmcEqeU";
 
 const Discord = () => {
   const handleJoin = () => {
